@@ -1278,6 +1278,8 @@ class LLMClient:
             return f"gigachat/{resolved_model}"
         if provider == "minimax":
             return f"minimax/{resolved_model}"
+        if provider == "ollama":
+            return f"ollama/{resolved_model}"
         return f"openai-compatible/{resolved_model}"
 
     def _resolve_remote_target(self, model: str) -> Dict[str, Any]:
@@ -1354,6 +1356,18 @@ class LLMClient:
                 ).strip() or "https://api.giga.chat/v1",
                 "scope": (os.environ.get("GIGACHAT_SCOPE", "") or "").strip() or "GIGACHAT_API_PERS",
                 "verify_ssl_certs": verify_raw not in ("0", "false", "no", "off"),
+                "default_headers": {},
+                "supports_openrouter_extensions": False,
+                "supports_generation_cost": False,
+            }
+
+        if provider == "ollama":
+            return {
+                "provider": provider,
+                "resolved_model": resolved_model,
+                "usage_model": usage_model,
+                "api_key": "",
+                "base_url": "http://localhost:11434/v1",
                 "default_headers": {},
                 "supports_openrouter_extensions": False,
                 "supports_generation_cost": False,
@@ -3825,6 +3839,11 @@ class LLMClient:
 
         usage["provider"] = str(target.get("provider") or "openrouter")
         usage["resolved_model"] = str(target.get("usage_model") or target.get("resolved_model") or "")
+        # Ollama — local model, always free
+        if usage["provider"] == "ollama":
+            usage["cost"] = 0.0
+            usage["cost_estimated"] = False
+            usage["cost_final"] = True
         if prompt_cache_ttl and not usage.get("prompt_cache_ttl"):
             usage["prompt_cache_ttl"] = prompt_cache_ttl
         # Anthropic's per-tier write split, when the route passed it through.

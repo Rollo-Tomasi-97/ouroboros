@@ -26,6 +26,7 @@ def resolve_minimax_base_url(region: str = "") -> str:
 # Direct-provider prefix → canonical provider name. Un-prefixed models route
 # through OpenRouter. Order matters only for readability; prefixes are disjoint.
 PROVIDER_PREFIXES: tuple[tuple[str, str], ...] = (
+    ("ollama::", "ollama"),
     ("openai::", "openai"),
     ("anthropic::", "anthropic"),
     ("minimax::", "minimax"),
@@ -70,6 +71,7 @@ PROVIDER_CREDENTIAL_GROUPS: dict[str, tuple[str, ...]] = {
         "GIGACHAT_CREDENTIALS", "GIGACHAT_PASSWORD", "GIGACHAT_USER",
         "GIGACHAT_BASE_URL", "GIGACHAT_SCOPE", "GIGACHAT_VERIFY_SSL_CERTS",
     ),
+    "ollama": (),
     "openai-compatible": (
         "OPENAI_COMPATIBLE_API_KEY", "OPENAI_COMPATIBLE_BASE_URL",
         "OPENAI_API_KEY", "OPENAI_BASE_URL",
@@ -112,6 +114,8 @@ def provider_for_model(model: str) -> str:
 def provider_has_credentials(provider: str) -> bool:
     """Return True when the environment carries usable credentials for a provider."""
     if provider == "local":
+        return True
+    if provider == "ollama":
         return True
     if provider == "openai-compatible":
         compat = str(os.environ.get("OPENAI_COMPATIBLE_API_KEY", "") or "").strip()
@@ -327,6 +331,7 @@ _DIRECT_PROVIDER_DEFAULTS = {
     "cloudru": CLOUDRU_DIRECT_DEFAULTS,
     "gigachat": GIGACHAT_DIRECT_DEFAULTS,
     "minimax": MINIMAX_DIRECT_DEFAULTS,
+    "ollama": {},
 }
 
 _ANTHROPIC_MODEL_ALIASES = {
@@ -365,6 +370,12 @@ def migrate_model_value(provider: str, value: str) -> str:
             return text
         if text.startswith("minimax/"):
             return f"minimax::{text[len('minimax/'):]}"
+        return text
+    if provider == "ollama":
+        if text.startswith("ollama::"):
+            return text
+        if text.startswith("ollama/"):
+            return f"ollama::{text[len('ollama/'):]}"
         return text
     return text
 
@@ -445,6 +456,8 @@ def normalize_model_identity(model: str) -> str:
     text = str(model or "").strip()
     if text.endswith(" (local)"):
         text = text[:-8]
+    if text.startswith("ollama::"):
+        return f"ollama/{text[len('ollama::'):]}"
     if text.startswith("openai::"):
         return f"openai/{text[len('openai::'):]}"
     if text.startswith("openai-compatible::"):
