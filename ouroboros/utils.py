@@ -486,7 +486,8 @@ def run_cmd(cmd: List[str], cwd: Optional[pathlib.Path] = None) -> str:
     # существует» where the code and its tests match "already exists".
     env = {**os.environ, "LC_ALL": "C", "LANG": "C"}
     res = subprocess.run(
-        cmd, cwd=str(cwd) if cwd else None, capture_output=True, text=True, env=env,
+        cmd, cwd=str(cwd) if cwd else None, capture_output=True,
+        encoding="utf-8", errors="replace", env=env,
     )
     if res.returncode != 0:
         raise RuntimeError(
